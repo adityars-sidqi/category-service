@@ -1,43 +1,58 @@
-# APP DEPLOYMENT
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    run: category-service
-  name: category-service
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      run: category-service-exposed
-  template:
-    metadata:
-      labels:
-        run: category-service-exposed
-    spec:
-      serviceAccountName: chaos
-      containers:
-        - image: adityars/category-service
-          name: category-service
-          ports:
-            - containerPort: 8081
-              protocol: TCP
----
-
-# APP SERVICE
-
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    run: category-service
   name: category-service
+  labels:
+    app: category-service
 spec:
+  type: LoadBalancer
   ports:
-    - port: 8081
-      protocol: TCP
+    - protocol: TCP
+      port: 80
       targetPort: 8081
   selector:
-    run: category-service-exposed
-  type: NodePort
+    app: category-service
+---
+apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
+kind: Deployment
+metadata:
+  name: category-service
+spec:
+  selector:
+    matchLabels:
+      app: category-service
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: category-service
+    spec:
+      containers:
+      - name: category-service
+        image: swadharma/category-service:latest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        env:
+        - name: PROFILES
+          value: kubernetes
+        - name: PORT
+          value: "8081"
+        - name: DBURL
+          valueFrom:
+            secretKeyRef:
+              name: database
+              key: dburl
+        - name: DBUSERNAME
+          valueFrom:
+            secretKeyRef:
+              name: database
+              key: dbusername
+        - name: DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database
+              key: dbpassword
+        ports:
+        - containerPort: 8081
