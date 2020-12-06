@@ -1,0 +1,43 @@
+# APP DEPLOYMENT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: category-service
+  name: category-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: category-service-exposed
+  template:
+    metadata:
+      labels:
+        run: category-service-exposed
+    spec:
+      serviceAccountName: chaos
+      containers:
+        - image: adityars/category-service
+          name: category-service
+          ports:
+            - containerPort: 8081
+              protocol: TCP
+---
+
+# APP SERVICE
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: category-service
+  name: category-service
+spec:
+  ports:
+    - port: 8081
+      protocol: TCP
+      targetPort: 8081
+  selector:
+    run: category-service-exposed
+  type: NodePort
